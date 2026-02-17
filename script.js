@@ -86,7 +86,11 @@ const translations = {
             nameLabel: 'Ваше имя (будет видно в обсуждениях)',
             namePh: 'Например: Дәурен',
             save: 'Сохранить',
+            saving: 'Сохранение...',
+            saved: 'Сохранено!',
             note: '* Сейчас профиль сохраняется только в вашем браузере. Для общего доступа всем ученикам нужен сервер/Firestore.',
+            notAuthMsg: '🔒 Чтобы настроить профиль, войдите в аккаунт через Google.',
+            loginBtn: 'Войти',
         },
 
         discussion: {
@@ -219,7 +223,11 @@ const translations = {
             nameLabel: 'Атыңыз (талқылауда көрінеді)',
             namePh: 'Мысалы: Дәурен',
             save: 'Сақтау',
+            saving: 'Сақталуда...',
+            saved: 'Сақталды!',
             note: '* Қазір профиль тек сіздің браузеріңізде сақталады. Барлығына ортақ болу үшін сервер/Firestore керек.',
+            notAuthMsg: '🔒 Профильді баптау үшін Google аккаунтына кіріңіз.',
+            loginBtn: 'Кіру',
         },
 
         discussion: {
@@ -377,16 +385,48 @@ function initFirebaseAuth() {
 
     const { auth, provider, signInWithPopup, signOut, onAuthStateChanged } = fb;
 
+    function updateProfileAuthUI(user, lang) {
+        const notAuthCard = document.getElementById('profileNotAuth');
+        const authContent = document.getElementById('profileAuthContent');
+        const loginBtn = document.getElementById('profileLoginBtn');
+        if (!notAuthCard || !authContent) return;
+
+        if (user) {
+            notAuthCard.style.display = 'none';
+            authContent.style.display = '';
+        } else {
+            notAuthCard.style.display = '';
+            authContent.style.display = 'none';
+        }
+
+        if (loginBtn) {
+            loginBtn.onclick = () => {
+                if (!firebaseUser) {
+                    signInWithPopup(auth, provider).catch(() => { });
+                }
+            };
+        }
+
+        // Ensure button text updates on language change
+        if (loginBtn) {
+            loginBtn.textContent = t('profile.loginBtn', lang) || (lang === 'kk' ? 'Кіру' : 'Войти');
+        }
+    }
+
     onAuthStateChanged(auth, (user) => {
         firebaseUser = user || null;
         updateAuthButton(firebaseUser, currentLang);
+        updateProfileAuthUI(firebaseUser, currentLang);
+        try {
+            document.dispatchEvent(new CustomEvent('school31:authchange', { detail: { user: firebaseUser } }));
+        } catch { }
         // re-render admin UI areas
         try {
             if (document.getElementById('news-grid')) {
                 renderNewsAdminPanel(currentLang);
                 renderNewsArticles(currentLang);
             }
-        } catch {}
+        } catch { }
     });
 
     if (authBtn) {
@@ -396,10 +436,13 @@ function initFirebaseAuth() {
                     // Ошибку можно показать позже, пока просто игнорируем
                 });
             } else {
-                signOut(auth).catch(() => {});
+                signOut(auth).catch(() => { });
             }
         });
     }
+
+    // initial UI state
+    updateProfileAuthUI(firebaseUser, currentLang);
 }
 
 let currentLang = localStorage.getItem(LANG_STORAGE_KEY) || 'ru';
@@ -550,7 +593,7 @@ adminButtons.forEach(btn => {
         // Показываем демо-алерт только для настоящих кнопок в админ-панели.
         // Не блокируем обычные ссылки навигации, которые тоже используют класс admin-btn.
         if (btn.tagName === 'BUTTON') {
-        e.preventDefault();
+            e.preventDefault();
             alert(t('ui.demoAdmin', currentLang) || 'Demo');
         }
     });
@@ -561,11 +604,11 @@ const contactFormBtn = document.querySelector('.contact-form .btn');
 if (contactFormBtn) {
     // Убираем все предыдущие обработчики
     contactFormBtn.replaceWith(contactFormBtn.cloneNode(true));
-    
+
     // Находим новую кнопку после замены
     const newContactBtn = document.querySelector('.contact-form .btn');
     if (newContactBtn) {
-        newContactBtn.addEventListener('click', function(e) {
+        newContactBtn.addEventListener('click', function (e) {
             e.preventDefault();
             alert(t('ui.msgSent', currentLang) || 'OK');
         });
@@ -577,11 +620,11 @@ const ideaBtn = document.querySelector('.idea-box .admin-btn');
 if (ideaBtn) {
     // Убираем все предыдущие обработчики
     ideaBtn.replaceWith(ideaBtn.cloneNode(true));
-    
+
     // Находим новую кнопку после замены
     const newIdeaBtn = document.querySelector('.idea-box .admin-btn');
     if (newIdeaBtn) {
-        newIdeaBtn.addEventListener('click', function(e) {
+        newIdeaBtn.addEventListener('click', function (e) {
             e.preventDefault();
             const ideaInput = document.querySelector('.idea-box input');
             if (ideaInput && ideaInput.value.trim() !== '') {
@@ -637,22 +680,22 @@ async function sha256Hex(text) {
     return ('fnv1a_' + (h >>> 0).toString(16));
 }
 
-// Автоматически устанавливаем демо-пароль админа, как попросили.
-// ВАЖНО: это небезопасно — делает админ-доступ локально для любого, у кого есть доступ к этому браузеру.
-(async () => {
-    try {
-        const DEMO_PASS = 'NURIK10Badmin';
-        const stored = localStorage.getItem(ADMIN_PASS_HASH_KEY);
-        if (!stored) {
-            const hash = await sha256Hex(DEMO_PASS);
-            localStorage.setItem(ADMIN_PASS_HASH_KEY, hash);
-        }
-        // Также ставим сессию авторизованной, чтобы панель была доступна сразу.
-        sessionStorage.setItem(ADMIN_SESSION_KEY, '1');
-    } catch (e) {
-        // ignore
-    }
-})();
+// Убрана автоматическая авторизация админа для безопасности.
+// Пароль можно установить вручную через интерфейс админ-панели.
+// (async () => {
+//     try {
+//         const DEMO_PASS = 'NURIK10Badmin';
+//         const stored = localStorage.getItem(ADMIN_PASS_HASH_KEY);
+//         if (!stored) {
+//             const hash = await sha256Hex(DEMO_PASS);
+//             localStorage.setItem(ADMIN_PASS_HASH_KEY, hash);
+//         }
+//         // Также ставим сессию авторизованной, чтобы панель была доступна сразу.
+//         sessionStorage.setItem(ADMIN_SESSION_KEY, '1');
+//     } catch (e) {
+//         // ignore
+//     }
+// })();
 
 function loadArticles() {
     try {
@@ -836,7 +879,7 @@ function renderNewsAdminPanel(lang) {
                 const hash = await sha256Hex(p1);
                 localStorage.setItem(ADMIN_PASS_HASH_KEY, hash);
                 sessionStorage.setItem(ADMIN_SESSION_KEY, '1');
-        } else {
+            } else {
                 const p = prompt(t('dev.enterPassword', lang) || 'Enter password');
                 if (!p) return;
                 const hash = await sha256Hex(p);
@@ -941,6 +984,23 @@ function renderDiscussionForArticle(articleId, host, lang, profile) {
     send.className = 'admin-btn';
     send.textContent = t('discussion.send', lang) || 'Send';
 
+    const fb = window.school31Firebase;
+    const applyAuthState = (user) => {
+        const authed = !!user;
+        ta.disabled = !authed;
+        send.disabled = !authed;
+        if (!authed) {
+            ta.placeholder = (lang === 'kk') ? 'Пікір жазу үшін жүйеге кіріңіз...' : 'Для комментария нужно войти...';
+            send.style.opacity = '0.6';
+            send.style.cursor = 'not-allowed';
+        } else {
+            ta.placeholder = t('discussion.placeholder', lang) || '';
+            send.style.opacity = '';
+            send.style.cursor = '';
+        }
+    };
+    applyAuthState(fb && fb.auth ? fb.auth.currentUser : null);
+
     form.appendChild(ta);
     form.appendChild(send);
 
@@ -1036,7 +1096,15 @@ function renderDiscussionForArticle(articleId, host, lang, profile) {
         });
     }
 
+    const onAuthChange = (e) => {
+        const user = e && e.detail ? e.detail.user : null;
+        applyAuthState(user);
+    };
+    document.addEventListener('school31:authchange', onAuthChange);
+
     send.addEventListener('click', () => {
+        const user = (fb && fb.auth) ? fb.auth.currentUser : null;
+        if (!user) return;
         const text = ta.value.trim();
         if (!text) return;
         const author = (profile && profile.name && profile.name.trim()) ? profile.name.trim() : (t('discussion.anon', lang) || 'Anon');
@@ -1046,6 +1114,7 @@ function renderDiscussionForArticle(articleId, host, lang, profile) {
         if (fb && fb.db && fb.fs && fb.fs.addDoc && fb.fs.collection) {
             try {
                 const user = (fb.auth && fb.auth.currentUser) ? fb.auth.currentUser : null;
+                if (!user) return;
                 const col = fb.fs.collection(fb.db, 'articles', String(articleId), 'comments');
                 const payload = { id, name: author, text, ts: fb.fs.serverTimestamp() };
                 if (user) {
@@ -1139,6 +1208,29 @@ function openCommentsModal(articleId, lang, profile) {
     actions.appendChild(moreBtn);
     actions.appendChild(send);
 
+    const fb = window.school31Firebase;
+    const applyAuthState2 = (user) => {
+        const authed = !!user;
+        ta.disabled = !authed;
+        send.disabled = !authed;
+        if (!authed) {
+            ta.placeholder = (lang === 'kk') ? 'Пікір жазу үшін жүйеге кіріңіз...' : 'Для комментария нужно войти...';
+            send.style.opacity = '0.6';
+            send.style.cursor = 'not-allowed';
+        } else {
+            ta.placeholder = t('discussion.placeholder', lang) || '';
+            send.style.opacity = '';
+            send.style.cursor = '';
+        }
+    };
+    applyAuthState2(fb && fb.auth ? fb.auth.currentUser : null);
+
+    const onAuthChange2 = (e) => {
+        const user = e && e.detail ? e.detail.user : null;
+        applyAuthState2(user);
+    };
+    document.addEventListener('school31:authchange', onAuthChange2);
+
     form.appendChild(ta);
     form.appendChild(actions);
 
@@ -1208,6 +1300,8 @@ function openCommentsModal(articleId, lang, profile) {
     });
 
     send.addEventListener('click', () => {
+        const user = (fb && fb.auth) ? fb.auth.currentUser : null;
+        if (!user) return;
         const text = ta.value.trim();
         if (!text) return;
         const p = profile || loadProfile();
@@ -1218,6 +1312,7 @@ function openCommentsModal(articleId, lang, profile) {
         if (fb && fb.db && fb.fs && fb.fs.addDoc && fb.fs.collection) {
             try {
                 const user = (fb.auth && fb.auth.currentUser) ? fb.auth.currentUser : null;
+                if (!user) return;
                 const col = fb.fs.collection(fb.db, 'articles', String(articleId), 'comments');
                 const payload = { id, name: author, text, ts: fb.fs.serverTimestamp() };
                 if (user) {
@@ -1444,12 +1539,65 @@ document.addEventListener('school31:languagechange', (e) => {
     }
 });
 
+// Функция сжатия и изменения размера изображения
+function compressImage(file, maxWidth = 300, maxHeight = 300, quality = 0.8) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                // Вычисляем новые размеры с сохранением пропорций
+                if (width > height) {
+                    if (width > maxWidth) {
+                        height = Math.round((height * maxWidth) / width);
+                        width = maxWidth;
+                    }
+                } else {
+                    if (height > maxHeight) {
+                        width = Math.round((width * maxHeight) / height);
+                        height = maxHeight;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Конвертируем в JPEG с заданным качеством
+                canvas.toBlob(
+                    (blob) => {
+                        const compressedReader = new FileReader();
+                        compressedReader.onload = () => resolve(compressedReader.result);
+                        compressedReader.onerror = reject;
+                        compressedReader.readAsDataURL(blob);
+                    },
+                    'image/jpeg',
+                    quality
+                );
+            };
+            img.onerror = reject;
+            img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const nameInput = document.getElementById('profileName');
     const avatarInput = document.getElementById('profileAvatarInput');
     const avatarPreview = document.getElementById('profileAvatarPreview');
     const saveBtn = document.getElementById('profileSave');
     const removeBtn = document.getElementById('profileAvatarRemove');
+    const nameLabel = document.querySelector('.profile-label');
+
+    // Fallback для currentLang если не определён
+    const lang = typeof currentLang !== 'undefined' ? currentLang : 'ru';
 
     if (!nameInput || !avatarPreview || !saveBtn) return;
 
@@ -1458,21 +1606,88 @@ document.addEventListener('DOMContentLoaded', () => {
     avatarPreview.src = p.avatar || '';
     avatarPreview.style.visibility = p.avatar ? 'visible' : 'hidden';
 
+    // Анимация при смене аватара
+    function animateAvatarChange() {
+        avatarPreview.classList.remove('avatar-changed', 'avatar-loading');
+        void avatarPreview.offsetWidth; // Trigger reflow
+        avatarPreview.classList.add('avatar-changed');
+        setTimeout(() => {
+            avatarPreview.classList.remove('avatar-changed');
+        }, 400);
+    }
+
+    // Анимация при смене имени
+    function animateNameChange() {
+        if (nameLabel) {
+            nameLabel.classList.remove('label-changed');
+            void nameLabel.offsetWidth;
+            nameLabel.classList.add('label-changed');
+            setTimeout(() => {
+                nameLabel.classList.remove('label-changed');
+            }, 500);
+        }
+        nameInput.classList.remove('input-changed');
+        void nameInput.offsetWidth;
+        nameInput.classList.add('input-changed');
+        setTimeout(() => {
+            nameInput.classList.remove('input-changed');
+        }, 500);
+    }
+
+    // Анимация при сохранении
+    function animateSave() {
+        saveBtn.classList.add('btn-saving');
+        saveBtn.textContent = t('profile.saving', lang) || 'Сохранение...';
+
+        setTimeout(() => {
+            saveBtn.classList.remove('btn-saving');
+            saveBtn.classList.add('btn-saved');
+            saveBtn.textContent = t('profile.saved', lang) || 'Сохранено!';
+
+            setTimeout(() => {
+                saveBtn.classList.remove('btn-saved');
+                saveBtn.textContent = t('profile.save', lang) || 'Сохранить';
+            }, 1500);
+        }, 600);
+    }
+
     function setAvatar(dataUrl) {
         const cur = loadProfile();
         cur.avatar = dataUrl || '';
         saveProfile(cur);
         avatarPreview.src = cur.avatar || '';
         avatarPreview.style.visibility = cur.avatar ? 'visible' : 'hidden';
+
+        // Запускаем анимацию смены аватара
+        if (dataUrl) {
+            animateAvatarChange();
+        }
     }
 
     if (avatarInput) {
-        avatarInput.addEventListener('change', () => {
+        avatarInput.addEventListener('change', async () => {
             const file = avatarInput.files && avatarInput.files[0];
             if (!file) return;
-            const reader = new FileReader();
-            reader.onload = () => setAvatar(String(reader.result || ''));
-            reader.readAsDataURL(file);
+
+            // Проверяем тип файла
+            if (!file.type.startsWith('image/')) {
+                alert('Пожалуйста, выберите изображение');
+                avatarInput.value = '';
+                return;
+            }
+
+            // Показываем загрузку
+            avatarPreview.classList.add('avatar-loading');
+
+            try {
+                // Сжимаем изображение
+                const compressedDataUrl = await compressImage(file, 300, 300, 0.8);
+                setAvatar(String(compressedDataUrl || ''));
+            } catch (error) {
+                console.error('Ошибка при обработке изображения:', error);
+                alert('Не удалось обработать изображение. Попробуйте другой файл.');
+                avatarPreview.classList.remove('avatar-loading');
+            }
             avatarInput.value = '';
         });
     }
@@ -1481,9 +1696,23 @@ document.addEventListener('DOMContentLoaded', () => {
         removeBtn.addEventListener('click', () => setAvatar(''));
     }
 
+    // Отслеживаем изменение имени для анимации
+    nameInput.addEventListener('input', () => {
+        const cur = loadProfile();
+        if (nameInput.value !== cur.name) {
+            animateNameChange();
+        }
+    });
+
     saveBtn.addEventListener('click', () => {
         const cur = loadProfile();
         cur.name = String(nameInput.value || '').trim();
         saveProfile(cur);
+        animateSave();
+
+        // Анимация имени при сохранении
+        if (cur.name) {
+            animateNameChange();
+        }
     });
 });
