@@ -1092,11 +1092,9 @@ function renderDiscussionForArticle(articleId, host, lang, profile) {
                 const p = profile || loadProfile();
                 const col = fb.fs.collection(fb.db, 'articles', String(articleId), 'comments');
                 const payload = { id, name: author, text, ts: fb.fs.serverTimestamp() };
-                // Приоритет: сначала локальный аватар профиля, потом Google аватар
+                // Используем только локальный аватар профиля, иначе - пустая строка (серая ава)
                 if (p && p.avatar) {
                     payload.photoURL = p.avatar;
-                } else if (user && user.photoURL) {
-                    payload.photoURL = user.photoURL;
                 }
                 if (user) {
                     payload.email = user.email || '';
@@ -1266,11 +1264,9 @@ function openCommentsModal(articleId, lang, profile) {
                 const user = (fb.auth && fb.auth.currentUser) ? fb.auth.currentUser : null;
                 const col = fb.fs.collection(fb.db, 'articles', String(articleId), 'comments');
                 const payload = { id, name: author, text, ts: fb.fs.serverTimestamp() };
-                // Приоритет: сначала локальный аватар профиля, потом Google аватар
+                // Используем только локальный аватар профиля, иначе - пустая строка (серая ава)
                 if (p && p.avatar) {
                     payload.photoURL = p.avatar;
-                } else if (user && user.photoURL) {
-                    payload.photoURL = user.photoURL;
                 }
                 if (user) {
                     payload.email = user.email || '';
