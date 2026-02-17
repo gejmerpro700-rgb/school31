@@ -1089,15 +1089,18 @@ function renderDiscussionForArticle(articleId, host, lang, profile) {
         if (fb && fb.db && fb.fs && fb.fs.addDoc && fb.fs.collection) {
             try {
                 const user = (fb.auth && fb.auth.currentUser) ? fb.auth.currentUser : null;
+                const p = profile || loadProfile();
                 const col = fb.fs.collection(fb.db, 'articles', String(articleId), 'comments');
                 const payload = { id, name: author, text, ts: fb.fs.serverTimestamp() };
+                // Приоритет: сначала локальный аватар профиля, потом Google аватар
+                if (p && p.avatar) {
+                    payload.photoURL = p.avatar;
+                } else if (user && user.photoURL) {
+                    payload.photoURL = user.photoURL;
+                }
                 if (user) {
                     payload.email = user.email || '';
-                    payload.photoURL = user.photoURL || '';
                     payload.uid = user.uid || '';
-                } else {
-                    const p = profile || loadProfile();
-                    if (p && p.avatar) payload.photoURL = p.avatar;
                 }
                 fb.fs.addDoc(col, payload).catch(() => {
                     // fallback to localStorage if addDoc fails
@@ -1263,12 +1266,15 @@ function openCommentsModal(articleId, lang, profile) {
                 const user = (fb.auth && fb.auth.currentUser) ? fb.auth.currentUser : null;
                 const col = fb.fs.collection(fb.db, 'articles', String(articleId), 'comments');
                 const payload = { id, name: author, text, ts: fb.fs.serverTimestamp() };
+                // Приоритет: сначала локальный аватар профиля, потом Google аватар
+                if (p && p.avatar) {
+                    payload.photoURL = p.avatar;
+                } else if (user && user.photoURL) {
+                    payload.photoURL = user.photoURL;
+                }
                 if (user) {
                     payload.email = user.email || '';
-                    payload.photoURL = user.photoURL || '';
                     payload.uid = user.uid || '';
-                } else if (p && p.avatar) {
-                    payload.photoURL = p.avatar;
                 }
                 fb.fs.addDoc(col, payload).catch(() => {
                     addComment(articleId, { id, ts: Date.now(), name: author, text, email: payload.email || '', photoURL: payload.photoURL || '' });
