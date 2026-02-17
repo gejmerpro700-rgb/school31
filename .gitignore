@@ -1,0 +1,28 @@
+# Node
+node_modules/
+
+# Firebase service account keys (do NOT commit private keys)
+serviceAccountKey.json
+
+# Environment files
+.env
+.env.*
+
+# Local dev / OS
+.DS_Store
+Thumbs.db
+
+# Logs
+npm-debug.log*
+logs/
+coverage/
+
+# VS Code
+.vscode/
+
+# Build outputs
+dist/
+build/
+
+# Misc
+firebase-debug.log
