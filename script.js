@@ -1103,28 +1103,20 @@ function renderDiscussionForArticle(articleId, host, lang, profile) {
     document.addEventListener('school31:authchange', onAuthChange);
 
     send.addEventListener('click', () => {
-        const user = (fb && fb.auth) ? fb.auth.currentUser : null;
-        if (!user) return;
+        const currentUser = (fb && fb.auth) ? fb.auth.currentUser : null;
+        if (!currentUser) return;
         const text = ta.value.trim();
         if (!text) return;
         const author = (profile && profile.name && profile.name.trim()) ? profile.name.trim() : (t('discussion.anon', lang) || 'Anon');
         const id = (cryptoSafe && cryptoSafe.randomUUID) ? cryptoSafe.randomUUID() : String(Date.now());
         // If Firestore available, write there; still keep local fallback
-        const fb = window.school31Firebase;
         if (fb && fb.db && fb.fs && fb.fs.addDoc && fb.fs.collection) {
             try {
-                const user = (fb.auth && fb.auth.currentUser) ? fb.auth.currentUser : null;
-                if (!user) return;
                 const col = fb.fs.collection(fb.db, 'articles', String(articleId), 'comments');
                 const payload = { id, name: author, text, ts: fb.fs.serverTimestamp() };
-                if (user) {
-                    payload.email = user.email || '';
-                    payload.photoURL = user.photoURL || '';
-                    payload.uid = user.uid || '';
-                } else {
-                    const p = profile || loadProfile();
-                    if (p && p.avatar) payload.photoURL = p.avatar;
-                }
+                payload.email = currentUser.email || '';
+                payload.photoURL = currentUser.photoURL || '';
+                payload.uid = currentUser.uid || '';
                 fb.fs.addDoc(col, payload).catch(() => {
                     // fallback to localStorage if addDoc fails
                     addComment(articleId, { id, ts: Date.now(), name: author, text, email: payload.email || '', photoURL: payload.photoURL || '' });
@@ -1300,28 +1292,21 @@ function openCommentsModal(articleId, lang, profile) {
     });
 
     send.addEventListener('click', () => {
-        const user = (fb && fb.auth) ? fb.auth.currentUser : null;
-        if (!user) return;
+        const currentUser = (fb && fb.auth) ? fb.auth.currentUser : null;
+        if (!currentUser) return;
         const text = ta.value.trim();
         if (!text) return;
         const p = profile || loadProfile();
         const author = (p && p.name && p.name.trim()) ? p.name.trim() : (t('discussion.anon', lang) || 'Anon');
         const id = (cryptoSafe && cryptoSafe.randomUUID) ? cryptoSafe.randomUUID() : String(Date.now());
         // Firestore write if available
-        const fb = window.school31Firebase;
         if (fb && fb.db && fb.fs && fb.fs.addDoc && fb.fs.collection) {
             try {
-                const user = (fb.auth && fb.auth.currentUser) ? fb.auth.currentUser : null;
-                if (!user) return;
                 const col = fb.fs.collection(fb.db, 'articles', String(articleId), 'comments');
                 const payload = { id, name: author, text, ts: fb.fs.serverTimestamp() };
-                if (user) {
-                    payload.email = user.email || '';
-                    payload.photoURL = user.photoURL || '';
-                    payload.uid = user.uid || '';
-                } else if (p && p.avatar) {
-                    payload.photoURL = p.avatar;
-                }
+                payload.email = currentUser.email || '';
+                payload.photoURL = currentUser.photoURL || '';
+                payload.uid = currentUser.uid || '';
                 fb.fs.addDoc(col, payload).catch(() => {
                     addComment(articleId, { id, ts: Date.now(), name: author, text, email: payload.email || '', photoURL: payload.photoURL || '' });
                 });
