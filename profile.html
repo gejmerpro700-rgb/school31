@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Профиль - №31</title>
+    <link rel="stylesheet" href="style.css">
+    <script>document.documentElement.classList.add('js');</script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="logo">№31 мектеп</a>
+            <div class="menu-toggle" id="mobile-menu">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="index.html" data-i18n="nav.home">Главная</a></li>
+                <li><a href="about.html" data-i18n="nav.about">О школе</a></li>
+                <li><a href="news.html" data-i18n="nav.news">Новости</a></li>
+                <li><a href="contact.html" data-i18n="nav.contact">Связаться</a></li>
+                <li><a href="questions.html" data-i18n="nav.questions">Вопросы</a></li>
+                <li><a href="profile.html" class="active" data-i18n="nav.profile">Профиль</a></li>
+                <li>
+                    <button id="lang-toggle" class="lang-toggle" type="button" aria-label="Сменить язык">
+                        <span class="lang-label lang-ru">RU</span>
+                        <span class="lang-label lang-kk">KZ</span>
+                    </button>
+                </li>
+                <li><button id="theme-toggle" class="theme-toggle" type="button" aria-label="Переключить тему">🌙</button></li>
+            </ul>
+        </div>
+    </nav>
+
+    <section class="page-header">
+        <h2 data-i18n="profile.header">Профиль</h2>
+    </section>
+
+    <section class="profile-section">
+        <div class="profile-card glass">
+            <div class="profile-row">
+                <div class="avatar-block">
+                    <img id="profileAvatarPreview" class="avatar-preview" alt="avatar" />
+                    <div class="avatar-actions">
+                        <label class="admin-btn" style="display:inline-flex; align-items:center; justify-content:center;">
+                            <span data-i18n="profile.changeAvatar">📷 Выбрать аватар</span>
+                            <input id="profileAvatarInput" type="file" accept="image/*" style="display:none;">
+                        </label>
+                        <button id="profileAvatarRemove" class="admin-btn" type="button" data-i18n="profile.removeAvatar">🗑️ Удалить</button>
+                    </div>
+                </div>
+
+                <div class="profile-form">
+                    <label class="profile-label" data-i18n="profile.nameLabel">Ваше имя (будет видно в обсуждениях)</label>
+                    <input id="profileName" class="form-input" type="text" placeholder="Например: Дәурен" data-i18n-placeholder="profile.namePh">
+
+                    <div class="profile-actions">
+                        <button id="profileSave" class="btn" type="button" data-i18n="profile.save">Сохранить</button>
+                    </div>
+
+                    <p class="small-note" data-i18n="profile.note">
+                        * Сейчас профиль сохраняется только в вашем браузере. Для общего доступа всем ученикам нужен сервер/Firestore.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
