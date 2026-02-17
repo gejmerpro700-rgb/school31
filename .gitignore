@@ -3,9 +3,6 @@ node_modules/
 
 # Firebase service account keys (do NOT commit private keys)
 serviceAccountKey.json
-school31-site-firebase-adminsdk-*.json
-*.firebase-adminsdk-*.json
-school31-site-firebase-adminsdk-fbsvc-c573a976b6.json
 
 # Environment files
 .env

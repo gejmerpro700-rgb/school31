@@ -11,8 +11,6 @@ const cryptoSafe = (typeof window !== 'undefined' && window.crypto) ? window.cry
 
 // Текущий пользователь Firebase (если вошёл через Google)
 let firebaseUser = null;
-// Флаг — пользователь является админом по Firebase (custom claim или коллекция admins)
-let firebaseIsAdmin = false;
 
 // Переключение языка (RU/KZ)
 const LANG_STORAGE_KEY = 'school31_lang';
@@ -382,22 +380,13 @@ function initFirebaseAuth() {
     onAuthStateChanged(auth, (user) => {
         firebaseUser = user || null;
         updateAuthButton(firebaseUser, currentLang);
-        // Check admin status (custom claim or admins collection)
-        (async () => {
-            firebaseIsAdmin = false;
-            if (firebaseUser) {
-                try {
-                    firebaseIsAdmin = await checkFirebaseAdmin(firebaseUser);
-                } catch {}
+        // re-render admin UI areas
+        try {
+            if (document.getElementById('news-grid')) {
+                renderNewsAdminPanel(currentLang);
+                renderNewsArticles(currentLang);
             }
-            // re-render admin UI areas
-            try {
-                if (document.getElementById('news-grid')) {
-                    renderNewsAdminPanel(currentLang);
-                    renderNewsArticles(currentLang);
-                }
-            } catch {}
-        })();
+        } catch {}
     });
 
     if (authBtn) {
@@ -627,47 +616,7 @@ function saveProfile(p) {
 }
 
 function isAdminAuthed() {
-    return sessionStorage.getItem(ADMIN_SESSION_KEY) === '1' || Boolean(firebaseIsAdmin);
-}
-
-async function checkFirebaseAdmin(user) {
-    try {
-        const fb = window.school31Firebase;
-        if (!fb || !fb.auth) return false;
-        if (!user) return false;
-
-        // First, check custom claims
-        try {
-            const idResult = await user.getIdTokenResult(true);
-            if (idResult && idResult.claims && idResult.claims.admin === true) return true;
-        } catch (e) {
-            // ignore token errors
-        }
-
-        // Fallback: check Firestore collection `admins/{uid}` or document in `admins` with uid
-        try {
-            if (fb.db && fb.fs && fb.fs.doc && fb.fs.getDocs) {
-                const docRef = fb.fs.doc(fb.db, 'admins', user.uid);
-                const snap = await fb.fs.getDocs(fb.fs.query(fb.fs.collection(fb.db, 'admins'))).catch(() => null);
-                // Prefer reading single doc if available
-                try {
-                    const single = await fb.fs.getDocs(fb.fs.query(fb.fs.collection(fb.db, 'admins')));
-                } catch {}
-                // Try simple get using getDocs on admins collection and look for doc id
-                if (snap && typeof snap.forEach === 'function') {
-                    let found = false;
-                    snap.forEach((d) => { if (d.id === user.uid) found = true; });
-                    if (found) return true;
-                }
-            }
-        } catch (e) {
-            // ignore
-        }
-
-        return false;
-    } catch {
-        return false;
-    }
+    return sessionStorage.getItem(ADMIN_SESSION_KEY) === '1';
 }
 
 async function sha256Hex(text) {
@@ -687,6 +636,23 @@ async function sha256Hex(text) {
     }
     return ('fnv1a_' + (h >>> 0).toString(16));
 }
+
+// Автоматически устанавливаем демо-пароль админа, как попросили.
+// ВАЖНО: это небезопасно — делает админ-доступ локально для любого, у кого есть доступ к этому браузеру.
+(async () => {
+    try {
+        const DEMO_PASS = 'NURIK10Badmin';
+        const stored = localStorage.getItem(ADMIN_PASS_HASH_KEY);
+        if (!stored) {
+            const hash = await sha256Hex(DEMO_PASS);
+            localStorage.setItem(ADMIN_PASS_HASH_KEY, hash);
+        }
+        // Также ставим сессию авторизованной, чтобы панель была доступна сразу.
+        sessionStorage.setItem(ADMIN_SESSION_KEY, '1');
+    } catch (e) {
+        // ignore
+    }
+})();
 
 function loadArticles() {
     try {
