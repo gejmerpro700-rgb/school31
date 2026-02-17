@@ -984,29 +984,6 @@ function renderDiscussionForArticle(articleId, host, lang, profile) {
     send.className = 'admin-btn';
     send.textContent = t('discussion.send', lang) || 'Send';
 
-    const fb = window.school31Firebase;
-    const applyAuthState = (user) => {
-        const authed = !!user;
-        ta.disabled = !authed;
-        send.disabled = !authed;
-        if (!authed) {
-            ta.placeholder = (lang === 'kk') ? 'Пікір жазу үшін жүйеге кіріңіз...' : 'Для комментария нужно войти...';
-            send.style.opacity = '0.6';
-            send.style.cursor = 'not-allowed';
-        } else {
-            ta.placeholder = t('discussion.placeholder', lang) || '';
-            send.style.opacity = '';
-            send.style.cursor = '';
-        }
-    };
-    applyAuthState(fb && fb.auth ? fb.auth.currentUser : null);
-
-    const onAuthChange = (e) => {
-        const user = e && e.detail ? e.detail.user : null;
-        applyAuthState(user);
-    };
-    document.addEventListener('school31:authchange', onAuthChange);
-
     form.appendChild(ta);
     form.appendChild(send);
 
@@ -1103,20 +1080,25 @@ function renderDiscussionForArticle(articleId, host, lang, profile) {
     }
 
     send.addEventListener('click', () => {
-        const currentUser = (fb && fb.auth) ? fb.auth.currentUser : null;
-        if (!currentUser) return;
         const text = ta.value.trim();
         if (!text) return;
         const author = (profile && profile.name && profile.name.trim()) ? profile.name.trim() : (t('discussion.anon', lang) || 'Anon');
         const id = (cryptoSafe && cryptoSafe.randomUUID) ? cryptoSafe.randomUUID() : String(Date.now());
         // If Firestore available, write there; still keep local fallback
+        const fb = window.school31Firebase;
         if (fb && fb.db && fb.fs && fb.fs.addDoc && fb.fs.collection) {
             try {
+                const user = (fb.auth && fb.auth.currentUser) ? fb.auth.currentUser : null;
                 const col = fb.fs.collection(fb.db, 'articles', String(articleId), 'comments');
                 const payload = { id, name: author, text, ts: fb.fs.serverTimestamp() };
-                payload.email = currentUser.email || '';
-                payload.photoURL = currentUser.photoURL || '';
-                payload.uid = currentUser.uid || '';
+                if (user) {
+                    payload.email = user.email || '';
+                    payload.photoURL = user.photoURL || '';
+                    payload.uid = user.uid || '';
+                } else {
+                    const p = profile || loadProfile();
+                    if (p && p.avatar) payload.photoURL = p.avatar;
+                }
                 fb.fs.addDoc(col, payload).catch(() => {
                     // fallback to localStorage if addDoc fails
                     addComment(articleId, { id, ts: Date.now(), name: author, text, email: payload.email || '', photoURL: payload.photoURL || '' });
@@ -1200,29 +1182,6 @@ function openCommentsModal(articleId, lang, profile) {
     actions.appendChild(moreBtn);
     actions.appendChild(send);
 
-    const fb = window.school31Firebase;
-    const applyAuthState2 = (user) => {
-        const authed = !!user;
-        ta.disabled = !authed;
-        send.disabled = !authed;
-        if (!authed) {
-            ta.placeholder = (lang === 'kk') ? 'Пікір жазу үшін жүйеге кіріңіз...' : 'Для комментария нужно войти...';
-            send.style.opacity = '0.6';
-            send.style.cursor = 'not-allowed';
-        } else {
-            ta.placeholder = t('discussion.placeholder', lang) || '';
-            send.style.opacity = '';
-            send.style.cursor = '';
-        }
-    };
-    applyAuthState2(fb && fb.auth ? fb.auth.currentUser : null);
-
-    const onAuthChange2 = (e) => {
-        const user = e && e.detail ? e.detail.user : null;
-        applyAuthState2(user);
-    };
-    document.addEventListener('school31:authchange', onAuthChange2);
-
     form.appendChild(ta);
     form.appendChild(actions);
 
@@ -1292,21 +1251,25 @@ function openCommentsModal(articleId, lang, profile) {
     });
 
     send.addEventListener('click', () => {
-        const currentUser = (fb && fb.auth) ? fb.auth.currentUser : null;
-        if (!currentUser) return;
         const text = ta.value.trim();
         if (!text) return;
         const p = profile || loadProfile();
         const author = (p && p.name && p.name.trim()) ? p.name.trim() : (t('discussion.anon', lang) || 'Anon');
         const id = (cryptoSafe && cryptoSafe.randomUUID) ? cryptoSafe.randomUUID() : String(Date.now());
         // Firestore write if available
+        const fb = window.school31Firebase;
         if (fb && fb.db && fb.fs && fb.fs.addDoc && fb.fs.collection) {
             try {
+                const user = (fb.auth && fb.auth.currentUser) ? fb.auth.currentUser : null;
                 const col = fb.fs.collection(fb.db, 'articles', String(articleId), 'comments');
                 const payload = { id, name: author, text, ts: fb.fs.serverTimestamp() };
-                payload.email = currentUser.email || '';
-                payload.photoURL = currentUser.photoURL || '';
-                payload.uid = currentUser.uid || '';
+                if (user) {
+                    payload.email = user.email || '';
+                    payload.photoURL = user.photoURL || '';
+                    payload.uid = user.uid || '';
+                } else if (p && p.avatar) {
+                    payload.photoURL = p.avatar;
+                }
                 fb.fs.addDoc(col, payload).catch(() => {
                     addComment(articleId, { id, ts: Date.now(), name: author, text, email: payload.email || '', photoURL: payload.photoURL || '' });
                 });
