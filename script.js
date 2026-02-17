@@ -1001,6 +1001,12 @@ function renderDiscussionForArticle(articleId, host, lang, profile) {
     };
     applyAuthState(fb && fb.auth ? fb.auth.currentUser : null);
 
+    const onAuthChange = (e) => {
+        const user = e && e.detail ? e.detail.user : null;
+        applyAuthState(user);
+    };
+    document.addEventListener('school31:authchange', onAuthChange);
+
     form.appendChild(ta);
     form.appendChild(send);
 
@@ -1095,12 +1101,6 @@ function renderDiscussionForArticle(articleId, host, lang, profile) {
             list.appendChild(item);
         });
     }
-
-    const onAuthChange = (e) => {
-        const user = e && e.detail ? e.detail.user : null;
-        applyAuthState(user);
-    };
-    document.addEventListener('school31:authchange', onAuthChange);
 
     send.addEventListener('click', () => {
         const currentUser = (fb && fb.auth) ? fb.auth.currentUser : null;
